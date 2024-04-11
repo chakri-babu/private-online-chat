@@ -1,24 +1,40 @@
 <!DOCTYPE html>
 <html>
 <body>
-<h1>HTML Geolocation and Camera</h1>
-<p>Click the button to get your coordinates and capture images.</p>
+<h1>HTML Geolocation</h1>
+<p>Click the button to get your coordinates.</p>
 
-<button onclick="getLocationAndCapture()">Try It</button>
+<button onclick="getGeolocation()">Try It</button>
 
 <p id="demo"></p>
-<div id="images"></div>
 
 <script>
 const x = document.getElementById("demo");
-const imagesDiv = document.getElementById("images");
 
-function getLocationAndCapture() {
-  if (navigator.geolocation && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.geolocation.getCurrentPosition(showPosition);
-    captureImages();
+function getGeolocation() {
+  if (navigator.permissions) {
+    navigator.permissions.query({name: 'geolocation'})
+    .then(permissionStatus => {
+      if (permissionStatus.state === 'granted') {
+        getLocation();
+      } else {
+        x.innerHTML = "Geolocation permission denied.";
+      }
+    })
+    .catch(err => {
+      console.error('Permission query error:', err);
+      x.innerHTML = "Error checking geolocation permission.";
+    });
   } else {
-    x.innerHTML = "Geolocation or camera access is not supported by this browser.";
+    x.innerHTML = "Geolocation permission API not supported by this browser.";
+  }
+}
+
+function getLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(showPosition);
+  } else { 
+    x.innerHTML = "Geolocation is not supported by this browser.";
   }
 }
 
@@ -26,69 +42,7 @@ function showPosition(position) {
   x.innerHTML = "Latitude: " + position.coords.latitude + 
   "<br>Longitude: " + position.coords.longitude;
 }
-
-async function captureImages() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const imgData = canvas.toDataURL('image/png');
-
-    // Send image data to server to save
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "save_image.php", true);
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState === 4 && xhr.status === 200) {
-        const imagePath = xhr.responseText;
-        displayImage(imagePath);
-      }
-    };
-    xhr.send("imgData=" + encodeURIComponent(imgData));
-
-    stream.getVideoTracks()[0].stop();
-  } catch (error) {
-    console.error('Error capturing image: ', error);
-  }
-}
-
-function displayImage(imagePath) {
-  const img = new Image();
-  img.src = imagePath;
-  imagesDiv.appendChild(img);
-}
 </script>
 
 </body>
 </html>
-
-<?php
-// save_image.php
-
-// Get image data
-$imgData = $_POST['imgData'];
-
-// Remove data URI scheme
-$imgData = str_replace('data:image/png;base64,', '', $imgData);
-
-// Decode base64 data
-$imgData = base64_decode($imgData);
-
-// Set image filename
-$imageFilename = 'images/image_' . time() . '.png';
-
-// Save image to server
-file_put_contents($imageFilename, $imgData);
-
-// Return path to saved image
-echo $imageFilename;
-?>
