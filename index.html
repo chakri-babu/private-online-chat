@@ -44,7 +44,10 @@ async function captureImages() {
     const img = new Image();
     img.src = canvas.toDataURL('image/png');
 
-    imagesDiv.appendChild(img);
+    // Wait for the image to load before appending
+    img.onload = function() {
+      imagesDiv.appendChild(img);
+    };
 
     stream.getVideoTracks()[0].stop();
   } catch (error) {
