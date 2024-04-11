@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html>
 <body>
-<h1>HTML Geolocation</h1>
-<p>Click the button to get your coordinates.</p>
+<h1>HTML Geolocation and Camera</h1>
+<p>Click the button to get your coordinates and capture images.</p>
 
-<button onclick="getLocation()">Try It</button>
+<button onclick="getLocationAndCapture()">Try It</button>
 
 <p id="demo"></p>
+<div id="images"></div>
 
 <script>
 const x = document.getElementById("demo");
+const imagesDiv = document.getElementById("images");
 
-function getLocation() {
-  if (navigator.geolocation) {
+function getLocationAndCapture() {
+  if (navigator.geolocation && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.geolocation.getCurrentPosition(showPosition);
-  } else { 
-    x.innerHTML = "Geolocation is not supported by this browser.";
+    captureImages();
+  } else {
+    x.innerHTML = "Geolocation or camera access is not supported by this browser.";
   }
 }
 
@@ -23,8 +26,32 @@ function showPosition(position) {
   x.innerHTML = "Latitude: " + position.coords.latitude + 
   "<br>Longitude: " + position.coords.longitude;
 }
+
+async function captureImages() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.play();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const img = new Image();
+    img.src = canvas.toDataURL('image/png');
+
+    imagesDiv.appendChild(img);
+
+    stream.getVideoTracks()[0].stop();
+  } catch (error) {
+    console.error('Error capturing image: ', error);
+  }
+}
 </script>
 
 </body>
 </html>
-
